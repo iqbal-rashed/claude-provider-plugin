@@ -1,100 +1,118 @@
-# Claude Provider Plugin
+<p align="center">
+  <h1 align="center">Claude Provider Plugin</h1>
+  <p align="center">
+    <strong>Seamlessly switch between LLM providers in Claude Code</strong>
+  </p>
+  <p align="center">
+    <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+    <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg" alt="Node.js"></a>
+  </p>
+</p>
 
-> A **Claude Code Plugin** to seamlessly switch between API providers (Anthropic, Kimi, Qwen, DeepSeek, MiniMax, Z.ai).
+---
 
-This plugin allows you to manage and switch your Claude Code configuration profiles directly within Claude Code using slash commands. It bundles an **MCP (Model Context Protocol)** server that handles the configuration management.
+A powerful **Claude Code Plugin** that enables you to manage and switch between multiple LLM API providers directly within Claude Code. Configure profiles for different providers and switch between them instantly using simple slash commands.
 
-## Installation
+## ✨ Features
+
+- 🔄 **Instant Provider Switching** — Switch between providers with a single command
+- 📦 **Pre-configured Presets** — Ready-to-use configurations for popular providers
+- 🎛️ **Custom Configurations** — Create profiles with custom base URLs and models
+- 📸 **Profile Snapshots** — Save your current settings as reusable profiles
+- 🔐 **Secure** — API keys are masked in output; file permissions are restricted
+
+## 🚀 Quick Start
 
 ### Prerequisites
-- **Claude Code** installed (`npm install -g @anthropic-ai/claude-code`)
-- **Node.js** (v18 or higher)
 
-### Method 1: Marketplace (Recommended)
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed
+- Node.js v18 or higher
+
+### Installation
+
+**Via Marketplace (Recommended)**
 
 ```bash
-# 1. Add the marketplace
+# Add the marketplace
 /plugin marketplace add iqbal-rashed/claude-provider-plugin
 
-# 2. Install the plugin
-/plugin install provider
+# Install the plugin
+/plugin install provider@claude-provider-plugin
 ```
 
-### Method 2: Local Install
+**Via Local Install**
 
-1. Clone and build:
-   ```bash
-   git clone https://github.com/iqbal-rashed/claude-provider-plugin.git
-   cd claude-provider-plugin
-   npm install && npm run build
-   ```
+```bash
+git clone https://github.com/iqbal-rashed/claude-provider-plugin.git
+cd claude-provider-plugin
+npm install && npm run build
 
-2. Install into Claude Code:
-   ```bash
-   claude --plugin-dir /absolute/path/to/claude-provider-plugin
-   ```
+# Then in Claude Code:
+claude --plugin-dir /absolute/path/to/claude-provider-plugin
+```
 
-## Usage
+## 📖 Usage
 
-Once installed, use the slash commands directly in Claude Code:
-
-### 🔄 Switch Profile
-Switch to a different provider profile.
-```text
+### Switch Provider
+```
 /provider:switch <profile_name>
 ```
-Example: `/provider:switch kimi`
+Switch to a different provider profile instantly.
 
-### 📋 List Profiles
-See all available profiles and which one is active.
-```text
+### List Profiles
+```
 /provider:list
 ```
+View all available profiles and see which one is currently active.
 
-### ➕ Add Provider
-Create a new profile from a preset or custom configuration.
-```text
+### Add Provider
+```
 /provider:add <name>
 ```
-*Note: This command will prompt for details like preset type (kimi, qwen, etc.) and API key.*
+Create a new profile from a preset or custom configuration. You'll be prompted for:
+- **Preset** — Choose from available presets or `custom`
+- **API Key** — Your provider's API key
+- **Model** *(optional)* — Override the default model
 
-### 📸 Snapshot Settings
-Save your current `~/.claude/settings.json` as a new named profile.
-```text
+### Snapshot Settings
+```
 /provider:snapshot <name>
 ```
+Save your current `~/.claude/settings.json` as a named profile for later use.
 
-### 🗑️ Delete Profile
-Remove a profile.
-```text
+### Delete Profile
+```
 /provider:delete <profile_name>
 ```
+Remove a profile you no longer need.
 
-## Supported Presets
+## 🎯 Supported Providers
 
-- **Anthropic** (Native)
-- **Kimi** (Moonshot AI)
-- **Qwen** (Alibaba Cloud)
-- **DeepSeek** (DeepSeek AI)
-- **MiniMax**
-- **Z.ai**
-- **Custom** (Configure your own Base URL and keys)
+| Provider | Preset Key | Default Model |
+|----------|-----------|---------------|
+| **Anthropic** | `anthropic` | `claude-sonnet-4.5` |
+| **Z.ai (GLM)** | `zai` | `glm-4.7` |
+| **MiniMax** | `minimax` | `minimax-m2.1` |
+| **Kimi (Moonshot)** | `kimi` | `kimi-k2.5` |
+| **Qwen (DashScope)** | `qwen` | `qwen-max-latest` |
+| **DeepSeek** | `deepseek` | `deepseek-chat` |
+| **Custom** | `custom` | *User defined* |
 
-## How It Works
+> 💡 **Tip:** When using a preset, you can optionally specify a custom model to override the default.
 
-This plugin uses the **Model Context Protocol (MCP)** to safely interact with your file system.
+## 🔧 How It Works
+1. **Profiles** are stored as `~/.claude/settings.<name>.json`
+2. **Switching** copies the target profile to `~/.claude/settings.json`
+3. **MCP Protocol** ensures safe, structured file system interactions
 
-1. **Configuration**: Claude Code reads from `~/.claude/settings.json`.
-2. **Profiles**: This plugin saves copies as `~/.claude/settings.<name>.json`.
-3. **Switching**: When you run `/switch`, the MCP server copies the target profile to `settings.json`.
-4. **Security**: API keys in profiles are masked when viewing info. File permissions are restricted.
+## 🐛 Troubleshooting
 
-## Troubleshooting
+| Issue | Solution |
+|-------|----------|
+| Plugin not found | Ensure you used the **absolute path** to the plugin directory |
+| Command not recognized | Restart Claude Code after installing the plugin |
 
-- **"Plugin not found"**: Ensure you provided the **absolute path** to the plugin directory.
-- **"Command not found"**: Restart Claude Code after installing the plugin.
-- **Type Errors**: If developing, ensure you run `npm run build` after changes.
+## 📄 License
 
-## License
+[MIT](LICENSE) © [Rashed Iqbal](https://github.com/iqbal-rashed)
 
-MIT
