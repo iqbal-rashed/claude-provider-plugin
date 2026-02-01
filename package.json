@@ -1,0 +1,71 @@
+{
+  "name": "claude-switcher-plugin",
+  "version": "1.0.0",
+  "description": "Claude Code plugin to switch between API providers (Anthropic, Kimi, Qwen, DeepSeek, MiniMax, Z.ai) via MCP",
+  "author": "Rashed Iqbal <https://github.com/iqbal-rashed>",
+  "license": "MIT",
+  "keywords": [
+    "claude",
+    "claude-code",
+    "claude-code-plugin",
+    "mcp",
+    "anthropic",
+    "api",
+    "provider",
+    "switcher",
+    "kimi",
+    "qwen",
+    "deepseek",
+    "minimax",
+    "llm"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/iqbal-rashed/claude-switcher-plugin.git"
+  },
+  "homepage": "https://github.com/iqbal-rashed/claude-switcher-plugin#readme",
+  "bugs": {
+    "url": "https://github.com/iqbal-rashed/claude-switcher-plugin/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": {
+    "claude-switcher-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    ".claude-plugin",
+    ".mcp.json",
+    "commands",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsup",
+    "start": "node dist/index.js",
+    "lint": "eslint src --fix",
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run lint && npm run typecheck && npm run build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/node": "^22.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^10.0.0",
+    "prettier": "^3.4.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.1",
+    "zod": "^3.23.8"
+  }
+}

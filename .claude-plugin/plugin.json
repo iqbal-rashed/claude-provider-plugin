@@ -1,0 +1,7 @@
+{
+  "name": "claude-switcher",
+  "version": "0.1.0",
+  "description": "Switch Claude Code profiles/providers by swapping ~/.claude/settings.<profile>.json into ~/.claude/settings.json (via MCP).",
+  "commands": "./commands",
+  "mcpServers": "./.mcp.json"
+}
