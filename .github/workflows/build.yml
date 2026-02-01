@@ -1,54 +1,54 @@
 name: Build and Deploy
 
 on:
-  push:
-    branches:
-      - main
+    push:
+        branches:
+            - main
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+    build:
+        runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout main branch
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        steps:
+            - name: Checkout main branch
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+                  cache: "yarn"
 
-      - name: Install dependencies
-        run: npm ci
+            - name: Install dependencies
+              run: yarn install --frozen-lockfile
 
-      - name: Build
-        run: npm run build
+            - name: Build
+              run: yarn build
 
-      - name: Deploy to dist branch
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # Create orphan dist branch or checkout existing
-          git checkout --orphan dist-temp
-          
-          # Remove all files from staging
-          git rm -rf --cached .
-          
-          # Add only the necessary files for the plugin
-          git add -f dist/
-          git add -f .claude-plugin/
-          git add -f .mcp.json
-          git add -f commands/
-          git add -f package.json
-          git add -f README.md
-          git add -f LICENSE
-          
-          # Commit
-          git commit -m "Deploy from ${{ github.sha }}"
-          
-          # Force push to dist branch
-          git push origin dist-temp:dist --force
+            - name: Deploy to dist branch
+              run: |
+                  git config --global user.name "github-actions[bot]"
+                  git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+                  # Create orphan dist branch or checkout existing
+                  git checkout --orphan dist-temp
+
+                  # Remove all files from staging
+                  git rm -rf --cached .
+
+                  # Add only the necessary files for the plugin
+                  git add -f dist/
+                  git add -f .claude-plugin/
+                  git add -f .mcp.json
+                  git add -f commands/
+                  git add -f package.json
+                  git add -f README.md
+                  git add -f LICENSE
+
+                  # Commit
+                  git commit -m "Deploy from ${{ github.sha }}"
+
+                  # Force push to dist branch
+                  git push origin dist-temp:dist --force
