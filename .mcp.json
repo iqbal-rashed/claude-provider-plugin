@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "provider": {
-      "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/tools/index.js"],
+      "command": "npx",
+      "args": ["-y", "tsx", "${CLAUDE_PLUGIN_ROOT}/src/index.ts"],
       "cwd": "${CLAUDE_PLUGIN_ROOT}",
       "env": {}
     }
