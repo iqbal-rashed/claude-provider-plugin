@@ -1,41 +1,41 @@
 name: Build and Commit
 
 on:
-    push:
-        branches:
-            - main
-        paths:
-            - "src/**"
-            - "package.json"
-            - "tsup.config.ts"
-            - "tsconfig.json"
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "package.json"
+      - "tsup.config.ts"
+      - "tsconfig.json"
 
 jobs:
-    build:
-        runs-on: ubuntu-latest
-        permissions:
-            contents: write
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: "20"
-                  cache: "yarn"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "yarn"
 
-            - name: Install dependencies
-              run: yarn install --frozen-lockfile
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
 
-            - name: Build
-              run: yarn build
+      - name: Build
+        run: yarn build
 
-            - name: Commit dist
-              run: |
-                  git config --global user.name "github-actions[bot]"
-                  git config --global user.email "github-actions[bot]@users.noreply.github.com"
-                  git add -f dist/
-                  git diff --staged --quiet || git commit -m "build: update dist [skip ci]"
-                  git push
+      - name: Commit tools
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f tools/
+          git diff --staged --quiet || git commit -m "build: update tools [skip ci]"
+          git push

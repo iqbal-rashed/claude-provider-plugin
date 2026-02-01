@@ -28,12 +28,12 @@
     "url": "https://github.com/iqbal-rashed/claude-provider-plugin/issues"
   },
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./tools/index.js",
   "bin": {
-    "claude-provider-mcp": "./dist/index.js"
+    "claude-provider-mcp": "./tools/index.js"
   },
   "files": [
-    "dist",
+    "tools",
     ".claude-plugin",
     ".mcp.json",
     "commands",
@@ -46,7 +46,7 @@
   "scripts": {
     "dev": "tsx src/index.ts",
     "build": "tsup",
-    "start": "node dist/index.js",
+    "start": "node tools/index.js",
     "lint": "eslint src --fix",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",

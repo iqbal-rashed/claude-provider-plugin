@@ -9,7 +9,8 @@ export default defineConfig({
   splitting: false,
   sourcemap: false,
   target: "node18",
-  outDir: "dist",
+  outDir: "tools",
+  noExternal: [/(.*)/], // Bundle all dependencies
   banner: {
     js: "#!/usr/bin/env node",
   },
