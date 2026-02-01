@@ -5,6 +5,7 @@ import { z } from "zod";
  */
 export const SettingsSchema = z.object({
   env: z.record(z.string(), z.string()).optional().default({}),
+  enabledPlugins: z.record(z.string(), z.boolean()).optional(),
 });
 
 export type Settings = z.infer<typeof SettingsSchema>;

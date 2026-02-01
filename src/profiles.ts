@@ -129,7 +129,8 @@ export function writeProfile(name: string, settings: Settings): string {
 }
 
 /**
- * Switch to a different provider by copying its profile to settings.json
+ * Switch to a different provider by merging its profile with existing settings
+ * Preserves mcpServers (plugins) from the current settings
  */
 export function switchToProvider(name: string): string {
   ensureClaudeDir();
@@ -142,12 +143,24 @@ export function switchToProvider(name: string): string {
 
   backupCurrentSettings();
 
-  fs.copyFileSync(src, dest);
-  try {
-    fs.chmodSync(dest, 0o600);
-  } catch {
-    // chmod may fail on Windows
+  // Read the new profile settings
+  const newSettings = readSettings(src);
+  if (!newSettings) {
+    throw new Error(`Failed to read profile: settings.${name}.json`);
   }
+
+  // Read current settings to preserve enabledPlugins
+  const currentSettings = readSettings(dest);
+
+  // Merge: use new profile's env, but preserve existing enabledPlugins
+  const mergedSettings: Settings = {
+    ...newSettings,
+    // Preserve enabledPlugins from current settings if they exist
+    enabledPlugins: currentSettings?.enabledPlugins ?? newSettings.enabledPlugins,
+  };
+
+  // Write merged settings
+  writeSettings(dest, mergedSettings);
 
   return dest;
 }
