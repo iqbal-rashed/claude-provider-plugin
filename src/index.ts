@@ -8,13 +8,13 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
-import { registerListProfiles } from "./tools/list-profiles.js";
-import { registerSwitchProfile } from "./tools/switch-profile.js";
-import { registerSnapshotCurrent } from "./tools/snapshot-current.js";
-import { registerAddProfile } from "./tools/add-profile.js";
-import { registerDeleteProfile } from "./tools/delete-profile.js";
-import { registerListPresets } from "./tools/list-presets.js";
-import { registerGetProfileInfo } from "./tools/get-profile-info.js";
+import { registerListProfiles } from "./registers/list-profiles.js";
+import { registerSwitchProfile } from "./registers/switch-profile.js";
+import { registerSnapshotCurrent } from "./registers/snapshot-current.js";
+import { registerAddProfile } from "./registers/add-profile.js";
+import { registerDeleteProfile } from "./registers/delete-profile.js";
+import { registerListPresets } from "./registers/list-presets.js";
+import { registerGetProfileInfo } from "./registers/get-profile-info.js";
 
 // Create MCP server instance
 const server = new McpServer({

@@ -13,9 +13,9 @@ export const PRESETS = {
     env: {
       ANTHROPIC_BASE_URL: "https://api.z.ai/api/anthropic",
       ANTHROPIC_AUTH_TOKEN: "<YOUR_ZAI_API_KEY>",
-      ANTHROPIC_DEFAULT_OPUS_MODEL: "glm-4.6",
-      ANTHROPIC_DEFAULT_SONNET_MODEL: "glm-4.6",
-      ANTHROPIC_DEFAULT_HAIKU_MODEL: "glm-4.5-air",
+      ANTHROPIC_DEFAULT_OPUS_MODEL: "glm-4.7",
+      ANTHROPIC_DEFAULT_SONNET_MODEL: "glm-4.7",
+      ANTHROPIC_DEFAULT_HAIKU_MODEL: "glm-4.7-flash",
     },
   },
   minimax: {
@@ -25,11 +25,11 @@ export const PRESETS = {
       ANTHROPIC_AUTH_TOKEN: "<MINIMAX_API_KEY>",
       API_TIMEOUT_MS: "3000000",
       CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
-      ANTHROPIC_MODEL: "MiniMax-M2",
-      ANTHROPIC_SMALL_FAST_MODEL: "MiniMax-M2",
-      ANTHROPIC_DEFAULT_OPUS_MODEL: "MiniMax-M2",
-      ANTHROPIC_DEFAULT_SONNET_MODEL: "MiniMax-M2",
-      ANTHROPIC_DEFAULT_HAIKU_MODEL: "MiniMax-M2",
+      ANTHROPIC_MODEL: "minimax-m2.1",
+      ANTHROPIC_SMALL_FAST_MODEL: "minimax-m2.1",
+      ANTHROPIC_DEFAULT_OPUS_MODEL: "minimax-m2.1",
+      ANTHROPIC_DEFAULT_SONNET_MODEL: "minimax-m2.1",
+      ANTHROPIC_DEFAULT_HAIKU_MODEL: "minimax-m2.1",
     },
   },
   kimi: {
@@ -37,11 +37,11 @@ export const PRESETS = {
     env: {
       ANTHROPIC_BASE_URL: "https://api.moonshot.ai/anthropic",
       ANTHROPIC_AUTH_TOKEN: "<MOONSHOT_API_KEY>",
-      ANTHROPIC_MODEL: "kimi-k2-thinking",
-      ANTHROPIC_SMALL_FAST_MODEL: "kimi-k2-turbo-preview",
-      ANTHROPIC_DEFAULT_OPUS_MODEL: "kimi-k2-thinking",
-      ANTHROPIC_DEFAULT_SONNET_MODEL: "kimi-k2-thinking-turbo",
-      ANTHROPIC_DEFAULT_HAIKU_MODEL: "kimi-k2-0905-preview",
+      ANTHROPIC_MODEL: "kimi-k2.5",
+      ANTHROPIC_SMALL_FAST_MODEL: "kimi-k2.5",
+      ANTHROPIC_DEFAULT_OPUS_MODEL: "kimi-k2.5",
+      ANTHROPIC_DEFAULT_SONNET_MODEL: "kimi-k2.5",
+      ANTHROPIC_DEFAULT_HAIKU_MODEL: "kimi-k2.5",
     },
   },
   qwen: {
@@ -49,11 +49,11 @@ export const PRESETS = {
     env: {
       ANTHROPIC_BASE_URL: "https://dashscope-intl.aliyuncs.com/apps/anthropic",
       ANTHROPIC_AUTH_TOKEN: "<YOUR_DASHSCOPE_API_KEY>",
-      ANTHROPIC_MODEL: "qwen-plus",
-      ANTHROPIC_SMALL_FAST_MODEL: "qwen-flash",
-      ANTHROPIC_DEFAULT_OPUS_MODEL: "qwen-plus",
-      ANTHROPIC_DEFAULT_SONNET_MODEL: "qwen-plus",
-      ANTHROPIC_DEFAULT_HAIKU_MODEL: "qwen-flash",
+      ANTHROPIC_MODEL: "qwen-max-latest",
+      ANTHROPIC_SMALL_FAST_MODEL: "qwen-turbo-latest",
+      ANTHROPIC_DEFAULT_OPUS_MODEL: "qwen-max-latest",
+      ANTHROPIC_DEFAULT_SONNET_MODEL: "qwen-plus-latest",
+      ANTHROPIC_DEFAULT_HAIKU_MODEL: "qwen-turbo-latest",
     },
   },
   deepseek: {
@@ -86,9 +86,9 @@ export const MODEL_ENV_KEYS = [
 /** Default model suggestions per preset */
 export const DEFAULT_MODEL_HINTS: Record<PresetKey, string> = {
   anthropic: "claude-sonnet-4.5",
-  zai: "glm-4.6",
-  kimi: "kimi-k2-thinking",
-  qwen: "qwen-plus",
-  minimax: "MiniMax-M2",
+  zai: "glm-4.7",
+  kimi: "kimi-k2.5",
+  qwen: "qwen-max-latest",
+  minimax: "minimax-m2.1",
   deepseek: "deepseek-chat",
 };
