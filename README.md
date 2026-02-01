@@ -12,10 +12,8 @@ This plugin allows you to manage and switch your Claude Code configuration profi
 
 ### Method 1: Marketplace (Recommended)
 
-After adding the repository to your marketplace sources:
-
 ```bash
-# 1. Add the repository
+# 1. Add the marketplace
 /plugin marketplace add iqbal-rashed/claude-provider-plugin
 
 # 2. Install the plugin

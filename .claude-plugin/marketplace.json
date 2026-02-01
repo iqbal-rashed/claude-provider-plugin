@@ -10,11 +10,7 @@
   "plugins": [
     {
       "name": "claude-provider",
-      "source": {
-        "source": "github",
-        "repo": "iqbal-rashed/claude-provider-plugin",
-        "ref": "dist"
-      },
+      "source": "./",
       "description": "Switch between API providers (Anthropic, Kimi, Qwen, DeepSeek, MiniMax, Z.ai) by managing Claude Code settings profiles via MCP",
       "author": {
         "name": "Rashed Iqbal"
