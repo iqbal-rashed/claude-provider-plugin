@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "claude-provider": {
+    "provider": {
       "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/index.js", "mcp"],
+      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/index.js"],
       "cwd": "${CLAUDE_PLUGIN_ROOT}",
       "env": {}
     }

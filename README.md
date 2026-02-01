@@ -17,7 +17,7 @@ This plugin allows you to manage and switch your Claude Code configuration profi
 /plugin marketplace add iqbal-rashed/claude-provider-plugin
 
 # 2. Install the plugin
-/plugin install claude-provider
+/plugin install provider
 ```
 
 ### Method 2: Local Install
