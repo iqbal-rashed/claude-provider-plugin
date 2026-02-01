@@ -2,10 +2,14 @@
 description: Switch to a profile (example: /provider:switch kimi)
 ---
 
-Use the argument text as the profile name: "$ARGUMENTS".
+If "$ARGUMENTS" is empty or not provided:
+- First call MCP tool `provider.list_profiles` to get available profiles
+- Show the user the list of available profiles
+- Ask the user which profile they want to switch to
+- Wait for their response before proceeding
 
-Call MCP tool `provider.switch_profile` with:
-- profile: "$ARGUMENTS"
+Once you have the profile name (from $ARGUMENTS or user input):
+- Call MCP tool `provider.switch_profile` with the profile name
 
 Then tell the user:
 - whether the switch succeeded
