@@ -16,24 +16,24 @@ After adding the repository to your marketplace sources:
 
 ```bash
 # 1. Add the repository
-/plugin marketplace add iqbal-rashed/claude-switcher-plugin
+/plugin marketplace add iqbal-rashed/claude-provider-plugin
 
 # 2. Install the plugin
-/plugin install claude-switcher
+/plugin install claude-provider
 ```
 
 ### Method 2: Local Install
 
 1. Clone and build:
    ```bash
-   git clone https://github.com/iqbal-rashed/claude-switcher-plugin.git
-   cd claude-switcher-plugin
+   git clone https://github.com/iqbal-rashed/claude-provider-plugin.git
+   cd claude-provider-plugin
    npm install && npm run build
    ```
 
 2. Install into Claude Code:
    ```bash
-   claude --plugin-dir /absolute/path/to/claude-switcher-plugin
+   claude --plugin-dir /absolute/path/to/claude-provider-plugin
    ```
 
 ## Usage

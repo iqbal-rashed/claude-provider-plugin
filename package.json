@@ -1,5 +1,5 @@
 {
-  "name": "claude-switcher-plugin",
+  "name": "claude-provider-plugin",
   "version": "1.0.0",
   "description": "Claude Code plugin to switch between API providers (Anthropic, Kimi, Qwen, DeepSeek, MiniMax, Z.ai) via MCP",
   "author": "Rashed Iqbal <https://github.com/iqbal-rashed>",
@@ -21,16 +21,16 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/iqbal-rashed/claude-switcher-plugin.git"
+    "url": "https://github.com/iqbal-rashed/claude-provider-plugin.git"
   },
-  "homepage": "https://github.com/iqbal-rashed/claude-switcher-plugin#readme",
+  "homepage": "https://github.com/iqbal-rashed/claude-provider-plugin#readme",
   "bugs": {
-    "url": "https://github.com/iqbal-rashed/claude-switcher-plugin/issues"
+    "url": "https://github.com/iqbal-rashed/claude-provider-plugin/issues"
   },
   "type": "module",
   "main": "./dist/index.js",
   "bin": {
-    "claude-switcher-mcp": "./dist/index.js"
+    "claude-provider-mcp": "./dist/index.js"
   },
   "files": [
     "dist",
