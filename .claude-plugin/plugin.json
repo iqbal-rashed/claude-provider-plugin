@@ -1,6 +1,6 @@
 {
   "name": "provider",
-  "version": "1.0.0",
+  "version": "0.0.3",
   "description": "Switch between API providers (Anthropic, Kimi, Qwen, DeepSeek, MiniMax, Z.ai) by managing Claude Code settings profiles via MCP",
   "author": {
     "name": "Rashed Iqbal",
