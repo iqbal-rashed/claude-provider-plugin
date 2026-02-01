@@ -19,7 +19,7 @@ import { registerGetProfileInfo } from "./tools/get-profile-info.js";
 
 // Create MCP server instance
 const server = new McpServer({
-  name: "claude-switcher",
+  name: "provider",
   version: "1.0.0",
 });
 

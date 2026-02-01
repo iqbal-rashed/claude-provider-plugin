@@ -43,33 +43,33 @@ Once installed, use the slash commands directly in Claude Code:
 ### 🔄 Switch Profile
 Switch to a different provider profile.
 ```text
-/claude-switcher:switch <profile_name>
+/provider:switch <profile_name>
 ```
-Example: `/claude-switcher:switch kimi`
+Example: `/provider:switch kimi`
 
 ### 📋 List Profiles
 See all available profiles and which one is active.
 ```text
-/claude-switcher:list
+/provider:list
 ```
 
 ### ➕ Add Provider
 Create a new profile from a preset or custom configuration.
 ```text
-/claude-switcher:add <name>
+/provider:add <name>
 ```
 *Note: This command will prompt for details like preset type (kimi, qwen, etc.) and API key.*
 
 ### 📸 Snapshot Settings
 Save your current `~/.claude/settings.json` as a new named profile.
 ```text
-/claude-switcher:snapshot <name>
+/provider:snapshot <name>
 ```
 
 ### 🗑️ Delete Profile
 Remove a profile.
 ```text
-/claude-switcher:delete <profile_name>
+/provider:delete <profile_name>
 ```
 
 ## Supported Presets

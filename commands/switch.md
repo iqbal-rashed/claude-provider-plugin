@@ -1,10 +1,10 @@
 ---
-description: Switch to a profile (example: /claude-switcher:switch kimi)
+description: Switch to a profile (example: /provider:switch kimi)
 ---
 
 Use the argument text as the profile name: "$ARGUMENTS".
 
-Call MCP tool `claude-switcher.switch_profile` with:
+Call MCP tool `provider.switch_profile` with:
 - profile: "$ARGUMENTS"
 
 Then tell the user:
