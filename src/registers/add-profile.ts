@@ -27,7 +27,7 @@ export function registerAddProfile(server: McpServer): void {
           .describe("Preset provider: anthropic, kimi, qwen, deepseek, minimax, zai, or custom"),
         apiKey: z.string().optional().describe("API key/token for the provider"),
         baseUrl: z.string().optional().describe("Base URL (required for custom preset)"),
-        model: z.string().optional().describe("Default model override"),
+        model: z.string().optional().describe("Optional model override. If not provided, uses the preset's default model (e.g., glm-4.7 for zai, kimi-k2.5 for kimi)"),
       },
     },
     async ({ name, preset, apiKey, baseUrl, model }) => {
