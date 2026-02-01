@@ -1,4 +1,4 @@
-# Claude Switcher Plugin
+# Claude Provider Plugin
 
 > A **Claude Code Plugin** to seamlessly switch between API providers (Anthropic, Kimi, Qwen, DeepSeek, MiniMax, Z.ai).
 

@@ -1,0 +1,39 @@
+{
+  "name": "claude-provider-plugin",
+  "owner": {
+    "name": "Rashed Iqbal",
+    "email": "dev.rashediqbal@gmail.com"
+  },
+  "metadata": {
+    "description": "Professional Claude Code provider switcher for managing multiple API configurations"
+  },
+  "plugins": [
+    {
+      "name": "claude-provider",
+      "source": {
+        "source": "github",
+        "repo": "iqbal-rashed/claude-provider-plugin",
+        "ref": "dist"
+      },
+      "description": "Switch between API providers (Anthropic, Kimi, Qwen, DeepSeek, MiniMax, Z.ai) by managing Claude Code settings profiles via MCP",
+      "author": {
+        "name": "Rashed Iqbal"
+      },
+      "homepage": "https://github.com/iqbal-rashed/claude-provider-plugin",
+      "repository": "https://github.com/iqbal-rashed/claude-provider-plugin",
+      "license": "MIT",
+      "keywords": [
+        "mcp",
+        "provider-switcher",
+        "anthropic",
+        "kimi",
+        "qwen",
+        "deepseek",
+        "minimax",
+        "settings-management"
+      ],
+      "category": "workflow",
+      "tags": ["mcp", "provider-switcher", "settings-management", "api-provider", "configuration"]
+    }
+  ]
+}
