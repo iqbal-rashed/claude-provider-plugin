@@ -50,7 +50,6 @@
     "lint": "eslint src --fix",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "postinstall": "npm run build",
     "prepublishOnly": "npm run lint && npm run typecheck && npm run build"
   },
   "devDependencies": {
