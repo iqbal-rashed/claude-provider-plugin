@@ -57,12 +57,6 @@ Use the provider commands directly within Claude Code via slash commands.
 /plugin install provider@claude-provider-plugin
 ```
 
-**Via Local Install:**
-
-```bash
-claude --plugin-dir /absolute/path/to/claude-provider-plugin
-```
-
 ### Plugin Commands
 
 #### Switch Provider
@@ -171,7 +165,6 @@ Display all installed providers with the active one highlighted.
 | Command not found | Run `npm install -g claude-provider` or check your PATH |
 | Plugin not found | Ensure you used the **absolute path** to the plugin directory |
 | Command not recognized | Restart Claude Code after installing the plugin |
-| VS Code won't open | The CLI will show the file path for manual editing |
 
 ---
 
