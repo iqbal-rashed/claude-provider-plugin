@@ -1,13 +1,14 @@
 {
-  "name": "claude-provider-plugin",
+  "name": "claude-provider",
   "version": "0.0.3",
-  "description": "Claude Code plugin to switch between API providers (Anthropic, Kimi, Qwen, DeepSeek, MiniMax, Z.ai) via MCP",
+  "description": "CLI tool and Claude Code plugin to switch between API providers (Anthropic, Kimi, Qwen, DeepSeek, MiniMax, Z.ai)",
   "author": "Rashed Iqbal <https://github.com/iqbal-rashed>",
   "license": "MIT",
   "keywords": [
     "claude",
     "claude-code",
     "claude-code-plugin",
+    "cli",
     "mcp",
     "anthropic",
     "api",
@@ -28,15 +29,14 @@
     "url": "https://github.com/iqbal-rashed/claude-provider-plugin/issues"
   },
   "type": "module",
-  "main": "./tools/index.js",
+  "main": "./dist/mcp.js",
   "bin": {
-    "claude-provider-mcp": "./tools/index.js"
+    "claude-provider-mcp": "./dist/mcp.js",
+    "claude-provider": "./dist/cli.js",
+    "cp": "./dist/cli.js"
   },
   "files": [
-    "tools",
-    ".claude-plugin",
-    ".mcp.json",
-    "commands",
+    "dist",
     "README.md",
     "LICENSE"
   ],
@@ -46,7 +46,7 @@
   "scripts": {
     "dev": "tsx src/index.ts",
     "build": "tsup",
-    "start": "node tools/index.js",
+    "start": "node dist/index.js",
     "lint": "eslint src --fix",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
@@ -65,6 +65,9 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.1",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "@clack/prompts": "^1.0.0",
+    "chalk": "^5.6.2",
+    "commander": "^14.0.3"
   }
 }

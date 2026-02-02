@@ -32,14 +32,15 @@ registerListPresets(server);
 registerGetProfileInfo(server);
 
 // Start the server
-async function main(): Promise<void> {
+export async function mcpServer(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   // Note: Don't log to stdout in stdio mode (breaks JSON-RPC)
   console.error("Claude Switcher MCP Server running on stdio");
 }
 
-main().catch((error) => {
+
+mcpServer().catch((error) => {
   console.error("Fatal error:", error);
   process.exit(1);
 });

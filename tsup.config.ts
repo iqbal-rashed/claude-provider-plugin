@@ -1,7 +1,7 @@
 import { defineConfig } from "tsup";
 
-export default defineConfig({
-  entry: ["src/index.ts"],
+export default defineConfig([{
+  entry: ["src/cli.ts", "src/mcp.ts"],
   format: ["esm"],
   dts: false,
   clean: true,
@@ -9,9 +9,8 @@ export default defineConfig({
   splitting: false,
   sourcemap: false,
   target: "node18",
-  outDir: "tools",
-  noExternal: [/(.*)/], // Bundle all dependencies
+  outDir: "dist",
   banner: {
     js: "#!/usr/bin/env node",
   },
-});
+}]);

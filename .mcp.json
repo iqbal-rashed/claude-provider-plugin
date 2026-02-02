@@ -2,9 +2,10 @@
   "mcpServers": {
     "provider": {
       "command": "npx",
-      "args": ["-y", "tsx", "${CLAUDE_PLUGIN_ROOT}/src/index.ts"],
-      "cwd": "${CLAUDE_PLUGIN_ROOT}",
-      "env": {}
+      "args": [
+        "-y",
+        "claude-provider-mcp"
+      ]
     }
   }
 }
