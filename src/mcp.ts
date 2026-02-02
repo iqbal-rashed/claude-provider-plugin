@@ -38,9 +38,3 @@ export async function mcpServer(): Promise<void> {
   // Note: Don't log to stdout in stdio mode (breaks JSON-RPC)
   console.error("Claude Switcher MCP Server running on stdio");
 }
-
-
-mcpServer().catch((error) => {
-  console.error("Fatal error:", error);
-  process.exit(1);
-});

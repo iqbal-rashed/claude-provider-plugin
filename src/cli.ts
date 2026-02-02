@@ -2,6 +2,7 @@ import { Command } from "commander";
 import chalk from "chalk";
 import { listProfiles, detectActiveProfile, switchToProvider } from "./profiles.js";
 import { runInteractiveMenu } from "./interactive.js";
+import { mcpServer } from "./mcp.js";
 
 /**
  * Display list of installed providers
@@ -75,6 +76,10 @@ export async function runCli(): Promise<void> {
     return;
   }
 
+  if (provider == "mcp") {
+    return mcpServer();
+  }
+
   if (provider) {
     directSwitch(provider);
     return;
@@ -82,7 +87,6 @@ export async function runCli(): Promise<void> {
 
   await runInteractiveMenu();
 }
-
 
 runCli().catch((error) => {
   console.error("Fatal error:", error);

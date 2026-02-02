@@ -31,7 +31,6 @@
   "type": "module",
   "main": "./dist/mcp.js",
   "bin": {
-    "claude-provider-mcp": "./dist/mcp.js",
     "claude-provider": "./dist/cli.js",
     "cp": "./dist/cli.js"
   },
