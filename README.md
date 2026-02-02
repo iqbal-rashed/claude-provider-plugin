@@ -102,14 +102,14 @@ Remove a profile you no longer need.
 
 ## 📖 CLI Usage
 
-After installation, you can use `claude-provider` or the shorthand `cp` from your terminal.
+After installation, you can use `claude-provider` or the shorthand `cpr` from your terminal.
 
 ### Interactive Mode
 
 ```bash
 claude-provider
 # or
-cp
+cpr
 ```
 
 Launches an interactive menu to:
@@ -122,7 +122,7 @@ Launches an interactive menu to:
 ```bash
 claude-provider <provider_name>
 # or
-cp kimi
+cpr kimi
 ```
 
 Switch directly to a provider by name.
@@ -132,7 +132,7 @@ Switch directly to a provider by name.
 ```bash
 claude-provider --list
 # or
-cp -l
+cpr -l
 ```
 
 Display all installed providers with the active one highlighted.

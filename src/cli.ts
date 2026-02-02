@@ -34,7 +34,7 @@ function directSwitch(name: string): void {
 
   if (!exists) {
     console.error(chalk.red(`Provider not installed: ${name}`));
-    console.error(chalk.dim('Tip: run "claude-provider" or "cp" to add providers interactively.'));
+    console.error(chalk.dim('Tip: run "claude-provider" or "cpr" to add providers interactively.'));
     process.exit(1);
   }
 

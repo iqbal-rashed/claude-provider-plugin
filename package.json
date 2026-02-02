@@ -1,6 +1,6 @@
 {
   "name": "claude-provider",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "CLI tool and Claude Code plugin to switch between API providers (Anthropic, Kimi, Qwen, DeepSeek, MiniMax, Z.ai)",
   "author": "Rashed Iqbal <https://github.com/iqbal-rashed>",
   "license": "MIT",
@@ -32,7 +32,7 @@
   "main": "./dist/mcp.js",
   "bin": {
     "claude-provider": "./dist/cli.js",
-    "cp": "./dist/cli.js"
+    "cpr": "./dist/cli.js"
   },
   "files": [
     "dist",
