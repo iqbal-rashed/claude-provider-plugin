@@ -149,14 +149,26 @@ export function switchToProvider(name: string): string {
     throw new Error(`Failed to read profile: settings.${name}.json`);
   }
 
-  // Read current settings to preserve enabledPlugins
+  // Read current settings to preserve non-provider-specific fields
   const currentSettings = readSettings(dest);
 
-  // Merge: use new profile's env, but preserve existing enabledPlugins
+  // Merge: start with current settings as base, then apply new profile's env
+  // This preserves all user settings (permissions, attribution, etc.) while
+  // only updating the provider-specific env vars
   const mergedSettings: Settings = {
+    ...currentSettings,
     ...newSettings,
-    // Preserve enabledPlugins from current settings if they exist
-    enabledPlugins: currentSettings?.enabledPlugins ?? newSettings.enabledPlugins,
+    // Deep merge env: combine current env with new profile's env vars
+    // New profile's env vars take precedence for conflicts
+    env: {
+      ...currentSettings?.env,
+      ...newSettings.env,
+    },
+    // Deep merge enabledPlugins: combine both current and new
+    enabledPlugins: {
+      ...currentSettings?.enabledPlugins,
+      ...newSettings.enabledPlugins,
+    },
   };
 
   // Write merged settings
