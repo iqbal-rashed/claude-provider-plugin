@@ -6,7 +6,7 @@ import os from "node:os";
 import { PRESETS, MODEL_ENV_KEYS, DEFAULT_MODEL_HINTS } from "./constants.js";
 import type { PresetKey } from "./constants.js";
 import type { Settings } from "./types.js";
-import { isValidProviderName, getSettingsPath, readSettings } from "./utils.js";
+import { createApiKeyHelper, isValidProviderName, getSettingsPath, readSettings } from "./utils.js";
 import {
   listProfiles,
   detectActiveProfile,
@@ -102,16 +102,18 @@ async function buildPresetSettings(presetKey: PresetKey): Promise<Settings | nul
   const template = PRESETS[presetKey];
   const env: Record<string, string> = { ...template.env };
 
-  // Prompt for API token if placeholder exists
-  if (env.ANTHROPIC_AUTH_TOKEN?.includes("<")) {
-    const token = await p.password({
-      message: "API key / token",
-      mask: "•",
-      validate: (v) => (!v ? "Token required" : undefined),
-    });
-    if (p.isCancel(token)) return null;
-    env.ANTHROPIC_AUTH_TOKEN = token;
-  }
+  const apiKey = await p.password({
+    message: "API key / token",
+    mask: "•",
+    validate: (v) => (!v ? "Token required" : undefined),
+  });
+  if (p.isCancel(apiKey)) return null;
+
+  const settings: Settings = {
+    apiKeyHelper: createApiKeyHelper(apiKey),
+    env,
+    model: template.model,
+  };
 
   // Optional model override
   const model = await p.text({
@@ -128,9 +130,10 @@ async function buildPresetSettings(presetKey: PresetKey): Promise<Settings | nul
         env[key] = modelName;
       }
     }
+    settings.model = modelName;
   }
 
-  return { env };
+  return settings;
 }
 
 async function buildCustomSettings(): Promise<Settings | null> {
@@ -142,7 +145,7 @@ async function buildCustomSettings(): Promise<Settings | null> {
   if (p.isCancel(baseUrl)) return null;
 
   const token = await p.password({
-    message: "ANTHROPIC_AUTH_TOKEN",
+    message: "API key / token",
     mask: "•",
     validate: (v) => (!v ? "Token required" : undefined),
   });
@@ -156,17 +159,21 @@ async function buildCustomSettings(): Promise<Settings | null> {
 
   const env: Record<string, string> = {
     ANTHROPIC_BASE_URL: baseUrl.trim(),
-    ANTHROPIC_AUTH_TOKEN: token,
   };
 
+  let modelName: string | undefined;
   if (model?.trim()) {
-    const modelName = model.trim();
-    env.ANTHROPIC_DEFAULT_OPUS_MODEL = modelName;
-    env.ANTHROPIC_DEFAULT_SONNET_MODEL = modelName;
-    env.ANTHROPIC_DEFAULT_HAIKU_MODEL = modelName;
+    modelName = model.trim();
+    for (const key of MODEL_ENV_KEYS) {
+      env[key] = modelName;
+    }
   }
 
-  return { env };
+  return {
+    apiKeyHelper: createApiKeyHelper(token),
+    env,
+    model: modelName,
+  };
 }
 
 /**
@@ -181,15 +188,17 @@ async function suggestSavingCurrentConfig(): Promise<void> {
     ? "zai"
     : baseUrl.includes("moonshot")
       ? "kimi"
-      : baseUrl.includes("aliyun") || baseUrl.includes("dashscope")
-        ? "qwen"
-        : baseUrl.includes("minimax")
-          ? "minimax"
-          : baseUrl.includes("deepseek")
-            ? "deepseek"
-            : baseUrl === ""
-              ? "anthropic"
-              : "custom";
+      : baseUrl.includes("fireworks.ai")
+        ? "fireworks"
+        : baseUrl.includes("aliyun") || baseUrl.includes("dashscope")
+          ? "qwen"
+          : baseUrl.includes("minimax")
+            ? "minimax"
+            : baseUrl.includes("deepseek")
+              ? "deepseek"
+              : baseUrl === ""
+                ? "anthropic"
+                : "custom";
 
   p.note(
     `Base URL: ${chalk.cyan(baseUrl || "(native Anthropic)")}\n` +

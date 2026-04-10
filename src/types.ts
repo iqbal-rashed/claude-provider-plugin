@@ -5,8 +5,10 @@ import { z } from "zod";
  */
 export const SettingsSchema = z
   .object({
+    apiKeyHelper: z.string().optional(),
     env: z.record(z.string(), z.string()).optional().default({}),
     enabledPlugins: z.record(z.string(), z.boolean()).optional(),
+    model: z.string().optional(),
   })
   .passthrough();
 

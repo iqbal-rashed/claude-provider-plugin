@@ -56,7 +56,7 @@ export function createProgram(): Command {
   return new Command()
     .name("claude-provider")
     .description("CLI tool to switch between Claude Code API providers")
-    .version("0.0.5")
+    .version("0.0.6")
     .argument("[provider]", "provider name (e.g. kimi, zai, qwen, minimax, deepseek)")
     .option("-l, --list", "list installed providers");
 }

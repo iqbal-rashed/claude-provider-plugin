@@ -2,6 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Profile, Settings } from "./types.js";
 import {
+  MODEL_ENV_KEYS,
+} from "./constants.js";
+import {
+  createApiKeyHelper,
   ensureClaudeDir,
   getClaudeDir,
   getProfilePath,
@@ -11,6 +15,14 @@ import {
   writeSettings,
   generateTimestamp,
 } from "./utils.js";
+
+const PROVIDER_ENV_KEYS = [
+  "ANTHROPIC_BASE_URL",
+  "ANTHROPIC_AUTH_TOKEN",
+  "API_TIMEOUT_MS",
+  "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+  ...MODEL_ENV_KEYS,
+];
 
 /**
  * List all installed provider profiles
@@ -43,6 +55,7 @@ export function detectProviderFromBaseUrl(baseUrl: string | undefined): string {
   if (!baseUrl || baseUrl === "") return "anthropic";
   if (baseUrl.includes("z.ai")) return "zai";
   if (baseUrl.includes("moonshot")) return "kimi";
+  if (baseUrl.includes("fireworks.ai")) return "fireworks";
   if (baseUrl.includes("aliyun") || baseUrl.includes("dashscope")) return "qwen";
   if (baseUrl.includes("minimax")) return "minimax";
   if (baseUrl.includes("deepseek")) return "deepseek";
@@ -110,12 +123,40 @@ export function getActiveProviderDisplay(profiles: Profile[]): string {
  * Create a backup of current settings.json if it exists
  */
 export function backupCurrentSettings(): string | null {
+  if (!isBackupEnabled()) return null;
+
   const settingsFile = getSettingsPath();
   if (!fs.existsSync(settingsFile)) return null;
+
+  purgeOldBackups();
 
   const backupPath = path.join(getClaudeDir(), `settings.backup.${generateTimestamp()}.json`);
   fs.copyFileSync(settingsFile, backupPath);
   return backupPath;
+}
+
+function isBackupEnabled(): boolean {
+  const value = process.env.CPR_BACKUP_SETTINGS;
+  if (!value) return false;
+  return !["0", "false", "no", "off"].includes(value.toLowerCase());
+}
+
+function purgeOldBackups(): void {
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+
+  for (const file of fs.readdirSync(getClaudeDir())) {
+    if (!file.startsWith("settings.backup.") || !file.endsWith(".json")) continue;
+
+    const filePath = path.join(getClaudeDir(), file);
+    try {
+      const stat = fs.statSync(filePath);
+      if (stat.mtimeMs < cutoff) {
+        fs.unlinkSync(filePath);
+      }
+    } catch {
+      // Ignore backup cleanup failures; switching should still proceed.
+    }
+  }
 }
 
 /**
@@ -148,6 +189,7 @@ export function switchToProvider(name: string): string {
   if (!newSettings) {
     throw new Error(`Failed to read profile: settings.${name}.json`);
   }
+  const normalizedSettings = normalizeProviderSettings(newSettings);
 
   // Read current settings to preserve non-provider-specific fields
   const currentSettings = readSettings(dest);
@@ -157,24 +199,60 @@ export function switchToProvider(name: string): string {
   // only updating the provider-specific env vars
   const mergedSettings: Settings = {
     ...currentSettings,
-    ...newSettings,
+    ...normalizedSettings,
     // Deep merge env: combine current env with new profile's env vars
     // New profile's env vars take precedence for conflicts
     env: {
       ...currentSettings?.env,
-      ...newSettings.env,
+      ...normalizedSettings.env,
     },
     // Deep merge enabledPlugins: combine both current and new
     enabledPlugins: {
       ...currentSettings?.enabledPlugins,
-      ...newSettings.enabledPlugins,
+      ...normalizedSettings.enabledPlugins,
     },
   };
+
+  if (!normalizedSettings.apiKeyHelper) {
+    delete mergedSettings.apiKeyHelper;
+  }
+  if (!normalizedSettings.model) {
+    delete mergedSettings.model;
+  }
+
+  for (const key of PROVIDER_ENV_KEYS) {
+    if (!(key in (normalizedSettings.env ?? {}))) {
+      delete mergedSettings.env[key];
+    }
+  }
 
   // Write merged settings
   writeSettings(dest, mergedSettings);
 
   return dest;
+}
+
+function normalizeProviderSettings(settings: Settings): Settings {
+  const env = { ...settings.env };
+  const normalized: Settings = {
+    ...settings,
+    env,
+  };
+
+  if (!normalized.apiKeyHelper && env.ANTHROPIC_AUTH_TOKEN) {
+    normalized.apiKeyHelper = createApiKeyHelper(env.ANTHROPIC_AUTH_TOKEN);
+  }
+
+  if (!normalized.model) {
+    normalized.model =
+      env.ANTHROPIC_MODEL ??
+      env.ANTHROPIC_DEFAULT_SONNET_MODEL ??
+      env.ANTHROPIC_DEFAULT_OPUS_MODEL ??
+      env.ANTHROPIC_DEFAULT_HAIKU_MODEL;
+  }
+
+  delete env.ANTHROPIC_AUTH_TOKEN;
+  return normalized;
 }
 
 /**
