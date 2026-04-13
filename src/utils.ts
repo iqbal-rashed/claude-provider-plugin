@@ -60,6 +60,17 @@ export function writeSettings(file: string, settings: Settings): void {
 }
 
 /**
+ * Build the command format expected by Claude settings apiKeyHelper.
+ */
+export function createApiKeyHelper(apiKey: string): string {
+  return `bash -c 'echo ${shellSingleQuoteContent(apiKey)}'`;
+}
+
+function shellSingleQuoteContent(value: string): string {
+  return value.replace(/'/g, "'\\''");
+}
+
+/**
  * Stable JSON stringify for reliable comparison
  */
 export function stableStringify(obj: unknown): string {

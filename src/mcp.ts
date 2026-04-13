@@ -19,7 +19,7 @@ import { registerGetProfileInfo } from "./registers/get-profile-info.js";
 // Create MCP server instance
 const server = new McpServer({
   name: "provider",
-  version: "0.0.3",
+  version: "0.0.6",
 });
 
 // Register all tools

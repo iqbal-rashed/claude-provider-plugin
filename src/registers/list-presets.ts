@@ -13,6 +13,7 @@ export function registerListPresets(server: McpServer): void {
         name: key,
         display: value.display,
         baseUrl: value.env.ANTHROPIC_BASE_URL || "(native Anthropic)",
+        model: value.model,
       }));
 
       return {
