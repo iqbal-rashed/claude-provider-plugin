@@ -24,6 +24,36 @@ const PROVIDER_ENV_KEYS = [
   ...MODEL_ENV_KEYS,
 ];
 
+const ACTIVE_PROFILE_MARKER = ".active-profile";
+
+/**
+ * Read the active profile name recorded in ~/.claude/.active-profile
+ */
+function readActiveProfileMarker(): string | null {
+  try {
+    const markerPath = path.join(getClaudeDir(), ACTIVE_PROFILE_MARKER);
+    if (!fs.existsSync(markerPath)) return null;
+    const name = fs.readFileSync(markerPath, "utf8").trim();
+    return name || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Record the active profile name in ~/.claude/.active-profile
+ * Used as a tiebreaker when multiple profiles share the same base URL
+ * (e.g. different Anthropic plans on the same account)
+ */
+function writeActiveProfileMarker(name: string): void {
+  try {
+    const markerPath = path.join(getClaudeDir(), ACTIVE_PROFILE_MARKER);
+    fs.writeFileSync(markerPath, `${name}\n`, { mode: 0o600 });
+  } catch {
+    // Non-fatal; detection will fall back to base URL matching
+  }
+}
+
 /**
  * List all installed provider profiles
  */
@@ -63,34 +93,55 @@ export function detectProviderFromBaseUrl(baseUrl: string | undefined): string {
 }
 
 /**
- * Detect which profile is currently active based on ANTHROPIC_BASE_URL
+ * Detect which profile is currently active.
+ *
+ * Priority:
+ *   1. `.active-profile` marker file (set by `switchToProvider`) — required
+ *      tiebreaker when multiple profiles share the same ANTHROPIC_BASE_URL,
+ *      e.g. distinct Anthropic plans (Pro / Team / Enterprise) on the same
+ *      account.
+ *   2. Exact ANTHROPIC_BASE_URL match between settings.json and a profile.
+ *   3. Exact JSON match (for manually copied settings).
  */
 export function detectActiveProfile(profiles: Profile[]): string | null {
   const active = readSettings(getSettingsPath());
   if (!active) return null;
 
-  // Primary: match by base URL (most reliable for provider detection)
-  const activeBaseUrl = active.env?.ANTHROPIC_BASE_URL;
+  // 1) Marker file: preferred when it points to an existing profile AND the
+  //    profile's base URL is consistent with the current settings. The URL
+  //    consistency check prevents stale markers from hiding a genuine switch
+  //    (e.g. the user edited settings.json manually).
+  const marker = readActiveProfileMarker();
+  if (marker) {
+    const markedProfile = profiles.find((p) => p.name === marker);
+    if (markedProfile) {
+      const markedSettings = readSettings(markedProfile.file);
+      const activeUrl = active.env?.ANTHROPIC_BASE_URL ?? "";
+      const markedUrl = markedSettings?.env?.ANTHROPIC_BASE_URL ?? "";
+      if (activeUrl === markedUrl) {
+        return marker;
+      }
+    }
+  }
 
-  // Match by base URL first
+  // 2) Base URL match
+  const activeBaseUrl = active.env?.ANTHROPIC_BASE_URL;
   for (const profile of profiles) {
     const settings = readSettings(profile.file);
     if (!settings) continue;
 
     const profileBaseUrl = settings.env?.ANTHROPIC_BASE_URL;
 
-    // Exact base URL match
     if (activeBaseUrl && profileBaseUrl && activeBaseUrl === profileBaseUrl) {
       return profile.name;
     }
 
-    // Handle empty/undefined base URLs (Anthropic native)
     if ((!activeBaseUrl || activeBaseUrl === "") && (!profileBaseUrl || profileBaseUrl === "")) {
       return profile.name;
     }
   }
 
-  // Fallback: exact JSON match (if settings were manually copied)
+  // 3) Exact JSON match (for manually copied settings)
   const activeNormalized = stableStringify(active);
   for (const profile of profiles) {
     const settings = readSettings(profile.file);
@@ -99,7 +150,6 @@ export function detectActiveProfile(profiles: Profile[]): string | null {
     }
   }
 
-  // No matching profile, but try to detect provider from URL
   return null;
 }
 
@@ -229,6 +279,11 @@ export function switchToProvider(name: string): string {
   // Write merged settings
   writeSettings(dest, mergedSettings);
 
+  // Record the active profile for reliable detection on the next read.
+  // This is the only way to distinguish profiles that share the same
+  // ANTHROPIC_BASE_URL (e.g. multiple Anthropic plans on one account).
+  writeActiveProfileMarker(name);
+
   return dest;
 }
 
@@ -271,6 +326,15 @@ export function deleteProfile(name: string): void {
     throw new Error(`Provider profile not found: settings.${name}.json`);
   }
   fs.unlinkSync(file);
+
+  // Clear the active-profile marker if it pointed to the deleted profile.
+  if (readActiveProfileMarker() === name) {
+    try {
+      fs.unlinkSync(path.join(getClaudeDir(), ACTIVE_PROFILE_MARKER));
+    } catch {
+      // Non-fatal.
+    }
+  }
 }
 
 /**
