@@ -3,6 +3,12 @@ import chalk from "chalk";
 import { listProfiles, detectActiveProfile, switchToProvider } from "./profiles.js";
 import { runInteractiveMenu } from "./interactive.js";
 import { mcpServer } from "./mcp.js";
+import {
+  isMacOS,
+  saveCredentialForProfile,
+  restoreCredentialForProfile,
+  listSavedCredentials,
+} from "./credentials.js";
 
 /**
  * Display list of installed providers
@@ -47,6 +53,81 @@ function directSwitch(name: string): void {
 
   switchToProvider(profile.name);
   console.log(`✅ Switched to ${chalk.cyan(profile.name)}. Run "claude" then /status.`);
+
+  // Opt-in: automatically swap the keychain OAuth credential to match the
+  // newly activated profile. Enables seamless switching between profiles
+  // that share an ANTHROPIC_BASE_URL (e.g. multiple Anthropic plans).
+  if (isMacOS() && isCredentialAutoSwapEnabled()) {
+    const result = restoreCredentialForProfile(profile.name);
+    if (result.restored) {
+      console.log(chalk.dim(`   (keychain credential restored from ${result.path})`));
+    } else if (result.reason && result.reason !== "no saved credential for profile") {
+      console.warn(chalk.yellow(`   (credential restore skipped: ${result.reason})`));
+    }
+  }
+}
+
+function isCredentialAutoSwapEnabled(): boolean {
+  const value = process.env.CPR_SWAP_CREDENTIALS;
+  if (!value) return false;
+  return !["0", "false", "no", "off"].includes(value.toLowerCase());
+}
+
+/**
+ * Handle `cpr credential <action> [profile]` subcommand.
+ */
+function handleCredentialCommand(action: string, profile?: string): void {
+  if (!isMacOS()) {
+    console.error(chalk.red("credential commands are only supported on macOS"));
+    process.exit(1);
+  }
+
+  switch (action) {
+    case "save": {
+      if (!profile) {
+        console.error(chalk.red("Usage: cpr credential save <profile>"));
+        process.exit(1);
+      }
+      const result = saveCredentialForProfile(profile);
+      if (result.saved) {
+        console.log(`✅ Saved credential for ${chalk.cyan(profile)} → ${result.path}`);
+      } else {
+        console.error(chalk.red(`Failed: ${result.reason}`));
+        process.exit(1);
+      }
+      return;
+    }
+    case "restore": {
+      if (!profile) {
+        console.error(chalk.red("Usage: cpr credential restore <profile>"));
+        process.exit(1);
+      }
+      const result = restoreCredentialForProfile(profile);
+      if (result.restored) {
+        console.log(`✅ Restored credential for ${chalk.cyan(profile)} from ${result.path}`);
+      } else {
+        console.error(chalk.red(`Failed: ${result.reason}`));
+        process.exit(1);
+      }
+      return;
+    }
+    case "list": {
+      const saved = listSavedCredentials();
+      if (saved.length === 0) {
+        console.log(chalk.dim("No saved credentials. Run `cpr credential save <profile>`."));
+        return;
+      }
+      console.log(chalk.bold("Saved credentials:"));
+      for (const name of saved) {
+        console.log(` - ${name}`);
+      }
+      return;
+    }
+    default:
+      console.error(chalk.red(`Unknown action: ${action}`));
+      console.error(chalk.dim("Available: save, restore, list"));
+      process.exit(1);
+  }
 }
 
 /**
@@ -57,7 +138,12 @@ export function createProgram(): Command {
     .name("claude-provider")
     .description("CLI tool to switch between Claude Code API providers")
     .version("0.0.6")
-    .argument("[provider]", "provider name (e.g. kimi, zai, qwen, minimax, deepseek)")
+    .argument(
+      "[provider]",
+      'provider name (e.g. kimi, zai, qwen, minimax, deepseek) or "credential" for keychain subcommand'
+    )
+    .argument("[action]", 'subcommand action (for "credential" only: save / restore / list)')
+    .argument("[profile]", 'profile name (required for "credential save|restore")')
     .option("-l, --list", "list installed providers");
 }
 
@@ -78,6 +164,17 @@ export async function runCli(): Promise<void> {
 
   if (provider == "mcp") {
     return mcpServer();
+  }
+
+  if (provider === "credential") {
+    const action = program.args[1];
+    const credProfile = program.args[2];
+    if (!action) {
+      console.error(chalk.red("Usage: cpr credential <save|restore|list> [profile]"));
+      process.exit(1);
+    }
+    handleCredentialCommand(action, credProfile);
+    return;
   }
 
   if (provider) {
