@@ -131,6 +131,26 @@ cpr -l
 
 Display all installed providers with the active one highlighted.
 
+### Keychain Credential Swap (macOS, opt-in)
+
+When multiple profiles target the same Anthropic account (e.g. a Pro plan and a Team plan on one login), settings.json alone isn't enough to switch — Claude Code authenticates via an OAuth blob in the macOS keychain. The `credential` subcommand snapshots that blob per profile so `switch` can restore the correct one.
+
+```bash
+# Snapshot the current keychain credential for the active profile
+cpr credential save anthropic
+
+# Restore a previously saved credential to the keychain
+cpr credential restore anthropic
+
+# List saved credentials
+cpr credential list
+
+# Auto-restore on switch (opt-in via env var)
+CPR_SWAP_CREDENTIALS=1 cpr switch anthropic-team
+```
+
+macOS only. Without `CPR_SWAP_CREDENTIALS` the `switch` command never touches the keychain, so existing users are unaffected.
+
 ---
 
 ## 🎯 Supported Providers
