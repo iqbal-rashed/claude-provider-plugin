@@ -111,3 +111,38 @@ export function generateTimestamp(): string {
 export function isValidProviderName(name: string): boolean {
   return /^[a-z0-9][a-z0-9_-]*$/i.test(name);
 }
+
+/**
+ * Path of Claude Code's global state file (holds the cached oauthAccount).
+ */
+export function getClaudeJsonPath(): string {
+  return path.join(os.homedir(), ".claude.json");
+}
+
+/**
+ * Claude Code appends /v1/messages itself, so a base URL ending in /v1
+ * would end up as /v1/v1/messages. Strip it (and trailing slashes).
+ */
+export function normalizeBaseUrl(input: string): { url: string; stripped: boolean } {
+  const trimmed = input.trim().replace(/\/+$/, "");
+  const url = trimmed.replace(/\/v1$/i, "").replace(/\/+$/, "");
+  return { url, stripped: url !== trimmed };
+}
+
+/**
+ * List model ids from a `<base>/v1/models` endpoint.
+ */
+export async function fetchModels(baseUrl: string, apiKey: string): Promise<string[]> {
+  const { url } = normalizeBaseUrl(baseUrl);
+  const res = await fetch(`${url}/v1/models`, {
+    headers: {
+      "x-api-key": apiKey,
+      authorization: `Bearer ${apiKey}`,
+      "anthropic-version": "2023-06-01",
+    },
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const body = (await res.json()) as { data?: { id?: unknown }[] };
+  return (body.data ?? []).map((m) => m.id).filter((id): id is string => typeof id === "string");
+}

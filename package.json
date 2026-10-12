@@ -1,6 +1,6 @@
 {
   "name": "claude-provider",
-  "version": "0.0.6",
+  "version": "0.1.0",
   "description": "CLI tool and Claude Code plugin to switch between API providers (Anthropic, Kimi, Qwen, DeepSeek, MiniMax, Z.ai, Fireworks)",
   "author": "Rashed Iqbal <https://github.com/iqbal-rashed>",
   "license": "MIT",
@@ -50,6 +50,7 @@
     "lint": "eslint src --fix",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "prepublishOnly": "npm run lint && npm run build"
   },
   "devDependencies": {
@@ -61,13 +62,14 @@
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.0.0"
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^2.1.9"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.25.1",
-    "zod": "^3.23.8",
     "@clack/prompts": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.25.1",
     "chalk": "^5.6.2",
-    "commander": "^14.0.3"
+    "commander": "^14.0.3",
+    "zod": "^3.23.8"
   }
 }

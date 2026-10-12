@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { listProfiles, switchToProvider } from "../profiles.js";
+import { listProfiles, switchProfile } from "../profiles.js";
 
 export function registerSwitchProfile(server: McpServer): void {
   server.registerTool(
@@ -28,13 +28,14 @@ export function registerSwitchProfile(server: McpServer): void {
       }
 
       try {
-        switchToProvider(found.name);
+        const { notes } = switchProfile(found.name);
         return {
           content: [
             {
               type: "text",
               text:
                 `Switched ~/.claude/settings.json to profile "${found.name}".\n` +
+                (notes.length ? `${notes.join("\n")}\n` : "") +
                 `Restart Claude Code for changes to take effect.`,
             },
           ],

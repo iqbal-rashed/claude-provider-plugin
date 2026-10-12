@@ -4,7 +4,7 @@ import { writeProfile, profileExists } from "../profiles.js";
 import { PRESETS, MODEL_ENV_KEYS } from "../constants.js";
 import type { PresetKey } from "../constants.js";
 import type { Settings } from "../types.js";
-import { createApiKeyHelper } from "../utils.js";
+import { createApiKeyHelper, normalizeBaseUrl } from "../utils.js";
 
 const VALID_PRESETS = [
   "anthropic",
@@ -75,7 +75,7 @@ export function registerAddProfile(server: McpServer): void {
         }
 
         const env: Record<string, string> = {
-          ANTHROPIC_BASE_URL: baseUrl,
+          ANTHROPIC_BASE_URL: normalizeBaseUrl(baseUrl).url,
         };
 
         if (model) {

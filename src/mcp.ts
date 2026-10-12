@@ -15,11 +15,13 @@ import { registerAddProfile } from "./registers/add-profile.js";
 import { registerDeleteProfile } from "./registers/delete-profile.js";
 import { registerListPresets } from "./registers/list-presets.js";
 import { registerGetProfileInfo } from "./registers/get-profile-info.js";
+import { registerDuplicateProfile } from "./registers/duplicate-profile.js";
+import { registerAddAccount } from "./registers/add-account.js";
 
 // Create MCP server instance
 const server = new McpServer({
   name: "provider",
-  version: "0.0.6",
+  version: "0.1.0",
 });
 
 // Register all tools
@@ -30,6 +32,8 @@ registerAddProfile(server);
 registerDeleteProfile(server);
 registerListPresets(server);
 registerGetProfileInfo(server);
+registerDuplicateProfile(server);
+registerAddAccount(server);
 
 // Start the server
 export async function mcpServer(): Promise<void> {

@@ -4,13 +4,29 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import os from "node:os";
 import { PRESETS, MODEL_ENV_KEYS, DEFAULT_MODEL_HINTS } from "./constants.js";
+import {
+  describeLauncher,
+  installShellIntegration,
+  readLaunchers,
+  removeLauncher,
+  saveLauncher,
+} from "./launchers.js";
 import type { PresetKey } from "./constants.js";
 import type { Settings } from "./types.js";
-import { createApiKeyHelper, isValidProviderName, getSettingsPath, readSettings } from "./utils.js";
+import {
+  createApiKeyHelper,
+  isValidProviderName,
+  getSettingsPath,
+  readSettings,
+  normalizeBaseUrl,
+  fetchModels,
+} from "./utils.js";
 import {
   listProfiles,
   detectActiveProfile,
-  switchToProvider,
+  switchProfile,
+  duplicateProfile,
+  addClaudeAccount,
   writeProfile,
   getActiveProviderDisplay,
   deleteProfile,
@@ -91,7 +107,7 @@ export async function addProviderInteractive(): Promise<string | null> {
   if (p.isCancel(makeActive)) return null;
 
   if (makeActive) {
-    switchToProvider(providerName);
+    switchProfile(providerName);
     p.note(`Active provider is now: ${chalk.cyan(providerName)}`, "Switched");
   }
 
@@ -138,11 +154,18 @@ async function buildPresetSettings(presetKey: PresetKey): Promise<Settings | nul
 
 async function buildCustomSettings(): Promise<Settings | null> {
   const baseUrl = await p.text({
-    message: "ANTHROPIC_BASE_URL",
-    placeholder: "https://example.com/anthropic",
+    message: "ANTHROPIC_BASE_URL (Anthropic-compatible endpoint; a trailing /v1 is fine)",
+    placeholder: "https://example.com/v1",
     validate: (v) => (!v ? "Base URL required" : undefined),
   });
   if (p.isCancel(baseUrl)) return null;
+
+  const normalized = normalizeBaseUrl(baseUrl);
+  if (normalized.stripped) {
+    p.log.info(
+      `Using ${chalk.cyan(normalized.url)} (Claude Code adds /v1/messages itself, so the trailing /v1 was removed).`
+    );
+  }
 
   const token = await p.password({
     message: "API key / token",
@@ -151,14 +174,41 @@ async function buildCustomSettings(): Promise<Settings | null> {
   });
   if (p.isCancel(token)) return null;
 
-  const model = await p.text({
-    message: "Default model id (optional)",
-    placeholder: "qwen-plus / glm-4.6 / deepseek-chat ...",
+  let model: string | symbol = "";
+  const wantFetch = await p.confirm({
+    message: "Fetch the model list from <base>/v1/models?",
+    initialValue: true,
   });
-  if (p.isCancel(model)) return null;
+  if (p.isCancel(wantFetch)) return null;
+
+  if (wantFetch) {
+    try {
+      const ids = await fetchModels(normalized.url, token);
+      if (ids.length > 0) {
+        const picked = await p.select({
+          message: "Default model",
+          options: ids.slice(0, 50).map((id) => ({ value: id, label: id })),
+        });
+        if (p.isCancel(picked)) return null;
+        model = picked;
+      } else {
+        p.log.warn("Endpoint returned no models.");
+      }
+    } catch (e) {
+      p.log.warn(`Could not fetch models: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
+  if (!model) {
+    model = await p.text({
+      message: "Default model id (optional)",
+      placeholder: "qwen-plus / glm-4.6 / deepseek-chat ...",
+    });
+    if (p.isCancel(model)) return null;
+  }
 
   const env: Record<string, string> = {
-    ANTHROPIC_BASE_URL: baseUrl.trim(),
+    ANTHROPIC_BASE_URL: normalized.url,
   };
 
   let modelName: string | undefined;
@@ -278,6 +328,8 @@ async function runInteractiveMenuWithProfiles(
         hint: pr.name === active ? "active" : undefined,
       })),
       { value: "__add__", label: "✙ Add provider" },
+      { value: "__account__", label: "👤 Add another Claude account" },
+      { value: "__launchers__", label: "🚀 Start commands (claude <name>)" },
       { value: "__manage__", label: "⚙ Manage providers" },
       { value: "__exit__", label: "Exit" },
     ],
@@ -299,14 +351,149 @@ async function runInteractiveMenuWithProfiles(
     return;
   }
 
+  if (choice === "__launchers__") {
+    await launchersMenu(profiles.map((pr) => pr.name));
+    return;
+  }
+
+  if (choice === "__account__") {
+    const name = await p.text({
+      message: "Name for the new Claude account profile",
+      placeholder: "anthropic-secondary",
+      validate: (v) => {
+        if (!v) return "Name required";
+        if (!isValidProviderName(v)) return "Use letters, numbers, _ or -";
+        if (profiles.some((pr) => pr.name.toLowerCase() === v.toLowerCase())) return "Already exists";
+        return undefined;
+      },
+    });
+    if (p.isCancel(name)) return;
+    try {
+      for (const note of addClaudeAccount(name)) p.log.info(note);
+      p.outro("Done.");
+    } catch (e) {
+      p.outro(`${chalk.red("Failed:")} ${e instanceof Error ? e.message : String(e)}`);
+      process.exitCode = 1;
+    }
+    return;
+  }
+
   try {
-    switchToProvider(String(choice));
+    const { notes } = switchProfile(String(choice));
+    for (const note of notes) p.log.info(note);
     p.outro(`✅ Switched to ${chalk.cyan(choice)}. Run ${chalk.bold("claude")} then /status.`);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     p.outro(`${chalk.red("Failed:")} ${message}`);
     process.exitCode = 1;
   }
+}
+
+/**
+ * Create, change and remove start commands (launchers).
+ */
+async function launchersMenu(profileNames: string[]): Promise<void> {
+  const all = readLaunchers();
+  const pick = await p.select({
+    message: "Start commands",
+    options: [
+      ...Object.entries(all).map(([name, l]) => ({
+        value: name,
+        label: `claude ${name}`,
+        hint: describeLauncher(l),
+      })),
+      { value: "__new__", label: "✙ New start command" },
+      { value: "__shell__", label: "Enable `claude <name>` in my shell" },
+      { value: "__back__", label: "← Back" },
+    ],
+  });
+  if (p.isCancel(pick) || pick === "__back__") return runInteractiveMenu();
+
+  if (pick === "__shell__") {
+    try {
+      for (const { file, result } of installShellIntegration()) p.log.success(`${result}: ${file}`);
+      p.log.info("Open a new terminal, then: claude <name>");
+    } catch (e) {
+      p.log.error(e instanceof Error ? e.message : String(e));
+    }
+    return launchersMenu(profileNames);
+  }
+
+  if (pick !== "__new__") {
+    const action = await p.select({
+      message: `claude ${pick}`,
+      options: [
+        { value: "change", label: "Change" },
+        { value: "remove", label: "Remove" },
+        { value: "__back__", label: "← Back" },
+      ],
+    });
+    if (p.isCancel(action) || action === "__back__") return launchersMenu(profileNames);
+    if (action === "remove") {
+      removeLauncher(String(pick));
+      p.log.success(`Removed claude ${pick}`);
+      return launchersMenu(profileNames);
+    }
+  }
+
+  const existing = pick === "__new__" ? undefined : all[String(pick)];
+  let name = existing ? String(pick) : "";
+  if (!existing) {
+    const input = await p.text({
+      message: "Command name (you will type: claude <name>)",
+      placeholder: "keno",
+      validate: (v) => {
+        if (!v) return "Name required";
+        if (!isValidProviderName(v)) return "Use letters, numbers, _ or -";
+        if (all[v]) return "Already exists";
+        return undefined;
+      },
+    });
+    if (p.isCancel(input)) return launchersMenu(profileNames);
+    name = input;
+  }
+
+  const profile = await p.select({
+    message: "Profile to start (its login/provider)",
+    initialValue: existing?.profile,
+    options: profileNames.map((n) => ({ value: n, label: n })),
+  });
+  if (p.isCancel(profile)) return launchersMenu(profileNames);
+
+  const home = await p.confirm({
+    message: "Use the normal ~/.claude login and data? (No = own config dir, e.g. for a second account)",
+    initialValue: existing?.home ?? false,
+  });
+  if (p.isCancel(home)) return launchersMenu(profileNames);
+
+  const inference = await p.select({
+    message: "Send model requests through another profile? (keeps Remote Control on this login)",
+    initialValue: existing?.inference ?? "__none__",
+    options: [
+      { value: "__none__", label: "No" },
+      ...profileNames.filter((n) => n !== profile).map((n) => ({ value: n, label: n })),
+    ],
+  });
+  if (p.isCancel(inference)) return launchersMenu(profileNames);
+
+  try {
+    const { shim, shimConflict } = saveLauncher(
+      name,
+      {
+        ...existing,
+        profile,
+        home: home || undefined,
+        inference: inference === "__none__" ? undefined : inference,
+      },
+      { create: !existing }
+    );
+    p.log.success(`claude ${name}: ${describeLauncher(readLaunchers()[name])}`);
+    p.log.info(`Also available as "cpr launch ${name}"${shim ? ` and ${path.basename(shim)}` : ""}.`);
+    if (shimConflict) p.log.warn(`${shimConflict} already exists and is not ours; left untouched.`);
+  } catch (e) {
+    p.log.error(e instanceof Error ? e.message : String(e));
+  }
+  return launchersMenu(profileNames);
 }
 
 /**
@@ -345,6 +532,7 @@ async function manageProvidersMenu(
     message: `What do you want to do with "${providerName}"?`,
     options: [
       { value: "edit", label: "Edit provider" },
+      { value: "duplicate", label: "Duplicate" },
       { value: "delete", label: "Delete" },
       { value: "__back__", label: "← Back" },
     ],
@@ -352,6 +540,29 @@ async function manageProvidersMenu(
 
   if (p.isCancel(action) || action === "__back__") {
     return manageProvidersMenu(profiles, active);
+  }
+
+  if (action === "duplicate") {
+    const newName = await p.text({
+      message: `Name for the copy of "${providerName}"`,
+      initialValue: `${providerName}-copy`,
+      validate: (v) => {
+        if (!v) return "Name required";
+        if (!isValidProviderName(v)) return "Use letters, numbers, _ or -";
+        if (profiles.some((pr) => pr.name.toLowerCase() === v.toLowerCase())) return "Already exists";
+        return undefined;
+      },
+    });
+    if (!p.isCancel(newName)) {
+      try {
+        const file = duplicateProfile(providerName, newName);
+        p.note(`${chalk.green("Created")} ${path.basename(file)}`, "Profile duplicated");
+      } catch (e) {
+        p.log.error(e instanceof Error ? e.message : String(e));
+      }
+    }
+    const updated = listProfiles();
+    return manageProvidersMenu(updated, detectActiveProfile(updated));
   }
 
   if (action === "edit") {

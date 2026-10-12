@@ -2,25 +2,27 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { getClaudeDir } from "./utils.js";
+import { getClaudeDir, getClaudeJsonPath } from "./utils.js";
 
 /**
- * macOS keychain integration for swapping Claude Code OAuth credentials
- * across provider profiles that share the same ANTHROPIC_BASE_URL.
+ * Per-profile Claude Code login (OAuth) storage, so several Claude
+ * subscriptions can be swapped on switch.
  *
- * Claude Code stores its OAuth session in the macOS keychain under
- *   service="Claude Code-credentials"  account=<unix username>
+ * Live login location:
+ *   - macOS:         keychain, service "Claude Code-credentials"
+ *   - Windows/Linux: ~/.claude/.credentials.json
+ * Account identity (email/org shown in /status) is the `oauthAccount`
+ * block of ~/.claude.json and is swapped together with the credential.
  *
- * When a user has multiple Anthropic plans on the same account (e.g.
- * Pro / Team / Enterprise), switching plans requires swapping the
- * keychain blob as well as settings.json. This module provides helpers
- * to snapshot, restore, and list those keychain credentials on a
- * per-profile basis.
- *
- * All functions are no-ops outside of macOS.
+ * Saved snapshot: ~/.claude/credentials.<profile>.json (mode 0600).
  */
 
 const KEYCHAIN_SERVICE = "Claude Code-credentials";
+
+export interface SavedLogin {
+  credential: string;
+  oauthAccount: unknown | null;
+}
 
 export function isMacOS(): boolean {
   return process.platform === "darwin";
@@ -30,128 +32,200 @@ export function getCredentialPath(profile: string): string {
   return path.join(getClaudeDir(), `credentials.${profile}.json`);
 }
 
+function getLiveCredentialFile(): string {
+  return path.join(getClaudeDir(), ".credentials.json");
+}
+
 function getKeychainAccount(): string {
   return os.userInfo().username;
 }
 
-/**
- * Read the raw credential blob from the macOS keychain. Returns null if
- * the entry doesn't exist or the platform isn't macOS.
- */
-export function readKeychainCredential(): string | null {
-  if (!isMacOS()) return null;
+export function readLiveCredential(): string | null {
+  if (isMacOS()) {
+    try {
+      const out = execFileSync(
+        "security",
+        ["find-generic-password", "-s", KEYCHAIN_SERVICE, "-a", getKeychainAccount(), "-w"],
+        { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }
+      );
+      return out.trim() || null;
+    } catch {
+      return null;
+    }
+  }
   try {
-    const out = execFileSync(
-      "security",
-      ["find-generic-password", "-s", KEYCHAIN_SERVICE, "-a", getKeychainAccount(), "-w"],
-      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }
-    );
-    const trimmed = out.trim();
-    return trimmed.length > 0 ? trimmed : null;
+    const raw = fs.readFileSync(getLiveCredentialFile(), "utf8").trim();
+    return raw || null;
   } catch {
     return null;
   }
 }
 
-/**
- * Write a credential blob to the macOS keychain, replacing any existing
- * entry. The blob is expected to be a single-line JSON string produced
- * by Claude Code itself; multi-line input can cause `security` to treat
- * the value as binary, which Claude Code then refuses to parse.
- */
-export function writeKeychainCredential(token: string): void {
-  if (!isMacOS()) {
-    throw new Error("keychain integration is only available on macOS");
-  }
-  if (token.includes("\n")) {
-    throw new Error(
-      "keychain credentials must be a single-line JSON string; run `jq -c` before storing"
-    );
-  }
-
-  const account = getKeychainAccount();
-  try {
-    execFileSync(
-      "security",
-      ["add-generic-password", "-U", "-s", KEYCHAIN_SERVICE, "-a", account, "-w", token],
-      { stdio: "ignore" }
-    );
-  } catch {
-    // Fallback: some keychain states reject the -U update; delete and re-add.
+export function writeLiveCredential(token: string): void {
+  if (isMacOS()) {
+    if (token.includes("\n")) {
+      throw new Error("keychain credentials must be a single-line JSON string");
+    }
+    const account = getKeychainAccount();
     try {
       execFileSync(
         "security",
-        ["delete-generic-password", "-s", KEYCHAIN_SERVICE, "-a", account],
+        ["add-generic-password", "-U", "-s", KEYCHAIN_SERVICE, "-a", account, "-w", token],
         { stdio: "ignore" }
       );
     } catch {
-      // No existing entry is fine.
+      try {
+        execFileSync("security", ["delete-generic-password", "-s", KEYCHAIN_SERVICE, "-a", account], {
+          stdio: "ignore",
+        });
+      } catch {
+        // No existing entry is fine.
+      }
+      execFileSync(
+        "security",
+        ["add-generic-password", "-s", KEYCHAIN_SERVICE, "-a", account, "-w", token],
+        { stdio: "ignore" }
+      );
     }
-    execFileSync(
-      "security",
-      ["add-generic-password", "-s", KEYCHAIN_SERVICE, "-a", account, "-w", token],
-      { stdio: "ignore" }
-    );
+    return;
+  }
+  const file = getLiveCredentialFile();
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, token, { mode: 0o600 });
+  try {
+    fs.chmodSync(file, 0o600);
+  } catch {
+    // chmod may fail on Windows
   }
 }
 
-/**
- * Snapshot the current keychain credential into
- * ~/.claude/credentials.<profile>.json (mode 0600).
- */
+export function clearLiveCredential(): void {
+  if (isMacOS()) {
+    try {
+      execFileSync(
+        "security",
+        ["delete-generic-password", "-s", KEYCHAIN_SERVICE, "-a", getKeychainAccount()],
+        { stdio: "ignore" }
+      );
+    } catch {
+      // Nothing to clear.
+    }
+    return;
+  }
+  fs.rmSync(getLiveCredentialFile(), { force: true });
+}
+
+function readClaudeJson(): Record<string, unknown> | null {
+  try {
+    return JSON.parse(fs.readFileSync(getClaudeJsonPath(), "utf8")) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+export function readOauthAccount(): unknown | null {
+  return readClaudeJson()?.oauthAccount ?? null;
+}
+
+/** Set (or, with null, remove) the oauthAccount block, preserving the rest of ~/.claude.json. */
+export function writeOauthAccount(account: unknown | null): void {
+  const json = readClaudeJson();
+  if (!json) {
+    if (account === null) return;
+    fs.writeFileSync(getClaudeJsonPath(), JSON.stringify({ oauthAccount: account }, null, 2) + "\n");
+    return;
+  }
+  if (account === null) delete json.oauthAccount;
+  else json.oauthAccount = account;
+  fs.writeFileSync(getClaudeJsonPath(), JSON.stringify(json, null, 2) + "\n");
+}
+
+export function hasSavedCredential(profile: string): boolean {
+  return fs.existsSync(getCredentialPath(profile));
+}
+
+export function readSavedLogin(profile: string): SavedLogin | null {
+  let raw: string;
+  try {
+    raw = fs.readFileSync(getCredentialPath(profile), "utf8").trim();
+  } catch {
+    return null;
+  }
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (parsed.version === 1 && typeof parsed.credential === "string") {
+      return { credential: parsed.credential, oauthAccount: parsed.oauthAccount ?? null };
+    }
+  } catch {
+    // Fall through: legacy file holding the bare credential blob.
+  }
+  return { credential: raw, oauthAccount: null };
+}
+
 export function saveCredentialForProfile(profile: string): {
   saved: boolean;
   reason?: string;
   path: string;
 } {
   const credPath = getCredentialPath(profile);
-  if (!isMacOS()) {
-    return { saved: false, reason: "macOS only", path: credPath };
+  const credential = readLiveCredential();
+  if (!credential) {
+    return {
+      saved: false,
+      reason: "no logged-in Claude session found (run /login in claude first)",
+      path: credPath,
+    };
   }
-
-  const token = readKeychainCredential();
-  if (!token) {
-    return { saved: false, reason: "no keychain credential found", path: credPath };
-  }
-
-  fs.writeFileSync(credPath, `${token}\n`, { mode: 0o600 });
+  const body = { version: 1, credential, oauthAccount: readOauthAccount() };
+  fs.mkdirSync(path.dirname(credPath), { recursive: true });
+  fs.writeFileSync(credPath, JSON.stringify(body) + "\n", { mode: 0o600 });
   return { saved: true, path: credPath };
 }
 
-/**
- * Restore a saved credential for the given profile back into the
- * keychain. Missing files are reported but not thrown.
- */
 export function restoreCredentialForProfile(profile: string): {
   restored: boolean;
   reason?: string;
   path: string;
 } {
   const credPath = getCredentialPath(profile);
-  if (!isMacOS()) {
-    return { restored: false, reason: "macOS only", path: credPath };
-  }
   if (!fs.existsSync(credPath)) {
     return { restored: false, reason: "no saved credential for profile", path: credPath };
   }
-
-  const token = fs.readFileSync(credPath, "utf8").trim();
-  if (!token) {
+  const login = readSavedLogin(profile);
+  if (!login) {
     return { restored: false, reason: "credential file is empty", path: credPath };
   }
-
-  writeKeychainCredential(token);
+  writeLiveCredential(login.credential);
+  if (login.oauthAccount) writeOauthAccount(login.oauthAccount);
   return { restored: true, path: credPath };
 }
 
-/**
- * List saved credential profiles. Each entry is the bare profile name
- * parsed from credentials.<name>.json.
- */
+/** Log out locally (credential + cached account) so `/login` can add another account. */
+export function clearLogin(): void {
+  clearLiveCredential();
+  writeOauthAccount(null);
+}
+
+export function copySavedCredential(src: string, dest: string): boolean {
+  const from = getCredentialPath(src);
+  if (!fs.existsSync(from)) return false;
+  fs.copyFileSync(from, getCredentialPath(dest));
+  try {
+    fs.chmodSync(getCredentialPath(dest), 0o600);
+  } catch {
+    // chmod may fail on Windows
+  }
+  return true;
+}
+
+export function deleteSavedCredential(profile: string): void {
+  fs.rmSync(getCredentialPath(profile), { force: true });
+}
+
 export function listSavedCredentials(): string[] {
   const dir = getClaudeDir();
   if (!fs.existsSync(dir)) return [];
-
   return fs
     .readdirSync(dir)
     .filter((f) => f.startsWith("credentials.") && f.endsWith(".json"))

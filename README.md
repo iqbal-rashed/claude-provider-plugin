@@ -131,25 +131,114 @@ cpr -l
 
 Display all installed providers with the active one highlighted.
 
-### Keychain Credential Swap (macOS, opt-in)
-
-When multiple profiles target the same Anthropic account (e.g. a Pro plan and a Team plan on one login), settings.json alone isn't enough to switch — Claude Code authenticates via an OAuth blob in the macOS keychain. The `credential` subcommand snapshots that blob per profile so `switch` can restore the correct one.
+### Duplicate a Profile
 
 ```bash
-# Snapshot the current keychain credential for the active profile
-cpr credential save anthropic
-
-# Restore a previously saved credential to the keychain
-cpr credential restore anthropic
-
-# List saved credentials
-cpr credential list
-
-# Auto-restore on switch (opt-in via env var)
-CPR_SWAP_CREDENTIALS=1 cpr switch anthropic-team
+cpr duplicate kimi kimi-work
+cpr duplicate anthropic-main anthropic-copy --with-credentials   # also copy the saved Claude login
 ```
 
-macOS only. Without `CPR_SWAP_CREDENTIALS` the `switch` command never touches the keychain, so existing users are unaffected.
+Also available in the interactive menu (Manage providers → Duplicate), as the MCP tool `duplicate_profile`, and as `/provider:duplicate`.
+
+### Multiple Claude Subscriptions
+
+Profiles without an API key use your Claude subscription login. That login is swapped automatically on every switch:
+
+- Windows / Linux: `~/.claude/.credentials.json`
+- macOS: keychain item `Claude Code-credentials`
+- plus the `oauthAccount` block of `~/.claude.json`, so `/status` shows the right account
+
+Saved logins live in `~/.claude/credentials.<profile>.json` (mode 0600, plaintext on Windows/Linux like Claude Code's own file).
+
+```bash
+# 1. you are logged in as account A with profile "anthropic-main" active
+# 2. add account B:
+cpr add-account anthropic-secondary   # saves A's login, logs out locally
+claude                                # then /login with account B
+
+# switch whenever you like — logins are saved and restored for you
+cpr anthropic-main
+cpr anthropic-secondary
+```
+
+Other helpers: `cpr credential save|restore|clear|list [profile]`. Disable auto-swapping with `CPR_SWAP_CREDENTIALS=0`. Restart Claude Code after switching accounts.
+
+### Two Accounts at the Same Time (Remote Control on both)
+
+`cpr switch` changes the one global login. To run several sessions concurrently, use `cpr run`, which gives each profile its own config dir (`~/.claude-accounts/<name>`, via `CLAUDE_CONFIG_DIR`):
+
+```bash
+cpr run anthropic-main        # terminal 1
+cpr run anthropic-secondary   # terminal 2: first run asks for /login, then it's remembered
+```
+
+Each is a normal claude.ai login, so Remote Control works in both. Skills, commands, agents and plugins are shared with `~/.claude` via links (`--no-share` to opt out), and so are sessions (see Shared Sessions); `settings.json` is seeded from your global one plus the profile. Extra arguments go to claude: `cpr run anthropic-main -- --resume`.
+
+### Remote Control on A, inference through B (or a `/v1` gateway)
+
+Claude Code turns Remote Control off when `ANTHROPIC_BASE_URL` points anywhere but api.anthropic.com, so the redirect has to happen outside the process. Split mode starts a local [mitmproxy](https://mitmproxy.org) that rewrites only `POST /v1/messages` for that one session:
+
+```bash
+cpr run anthropic-main --inference anthropic-secondary   # RC login = main, model calls billed to secondary
+cpr run anthropic-main --inference my-gateway            # RC login = main, model calls go to your /v1 gateway
+cpr run anthropic-main --inference my-gateway --model some-model-id
+```
+
+Requirements and limits:
+- Install mitmproxy (`pipx install mitmproxy`) and run `mitmdump` once so its CA exists; the CA is trusted for that claude process only (`NODE_EXTRA_CA_CERTS`).
+- The session profile (A) must be a claude.ai login profile. B can be a gateway profile (needs `ANTHROPIC_BASE_URL` + key) or another account that you have run once with `cpr run` (its token is read from its config dir; if it has expired, run that account once to refresh it). B-as-account is not supported on macOS.
+- Stateful "thread" turns that a claude.ai login uses can't be served by another backend, so the proxy refuses them and Claude Code falls back to stateless requests.
+- Using one account's session to spend another account's subscription may conflict with Anthropic's terms; check before relying on it.
+
+### Start Commands (`claude keno`, `claude nils`, `claude omni`)
+
+Save a start command once, then launch it by name:
+
+```bash
+cpr launcher add keno anthropic-keno --home                         # shared ~/.claude, keno's login
+cpr launcher add nils anthropic-nils --home                         # shared ~/.claude, nils's login
+cpr launcher add omni anthropic-keno --home --inference omniroute   # RC on keno, models via gateway
+cpr launcher set keno anthropic-keno --home -- --resume             # change one (args after -- go to claude)
+cpr launcher list
+cpr launcher remove nils
+cpr launcher install-shell                                          # enables `claude <name>`
+```
+
+Each launcher can be started three ways: `claude <name>` (after `install-shell`), `claude-<name>` (a shim in `~/.local/bin`, or `CPR_BIN_DIR`), or `cpr launch <name> [claude args]`. The interactive menu has a "Start commands" entry for the same.
+
+- `--home` runs on the normal `~/.claude` (see below for the login swap) instead of an isolated dir. For a gateway profile, the provider is applied per process through env vars, so `settings.json` is never touched.
+- `install-shell` appends a marked block to your PowerShell profile (or `~/.bashrc` / `~/.zshrc`). It defines a `claude` function that runs a launcher when the first argument is a launcher name, and otherwise calls whatever `claude` was before. A backup is written as `<profile>.bak-cpr`. PowerShell functions drop a literal `--` argument, so call the previous target directly when you need one.
+- A shim is never written over (or deleted from) a file that cpr did not create. If `claude-<name>` already exists, the launcher still works through `claude <name>` and `cpr launch <name>`.
+- Launcher names cannot shadow claude subcommands (`mcp`, `update`, `remote-control`, …).
+- Isolated account dirs start from your MCP servers and project trust only, never your main account's cached flags or Remote Control state. On every start they also pick up folders newly trusted in `~/.claude.json`. Dirs seeded by an older version can be cleaned with `cpr account-clean <profile...>`.
+- The first `claude remote-control` in a new account dir asks "Enable Remote Control? (y/n)" once. It refuses to run from your home directory; start it from a project folder.
+
+### One Shared ~/.claude, Different Accounts
+
+Launchers with `--home` all run on the same `~/.claude`: same settings, memory, sessions, jobs and history. Only the claude.ai login differs. Starting a login launcher makes its account the live one: the outgoing login is saved under the profile it belongs to (matched by account, so refreshed tokens are kept), then the incoming one is restored. Split launchers (`--inference`) don't swap; they keep whatever login is live for Remote Control.
+
+```bash
+cpr launcher set keno anthropic-keno --home                         # kenoschreibt@… login
+cpr launcher set nils anthropic-nils --home                         # second account, same everything else
+cpr launcher set omni anthropic-keno --home --inference omniroute   # models via OmniRoute
+```
+
+When one subscription hits its limit, exit and continue the same conversation on the other:
+
+```bash
+claude keno              # ... "You've hit your session limit"
+claude nils --continue   # same folder: picks up the latest session
+claude nils --resume     # or pick any session
+```
+
+- One account at a time: starting `claude nils` switches every running session on `~/.claude` to nils (cpr warns when others are running). For two accounts at once, use an isolated launcher (without `--home`) for the second one.
+- Thinking is bound to the account's organization. After a switch, Claude Code notes it "can't use thinking from another organization", rereads the session and carries on (one-time extra tokens).
+- A profile's first login comes from its isolated account dir if it has one (`/login` there), else from `cpr credential save <profile>`, else claude asks for `/login`.
+- Isolated account dirs share transcripts and memory (`projects`), `file-history`, `plans`, `tasks` and `todos` with `~/.claude` too, so `--resume` works across them; their startup job list and prompt history stay their own. `--own-sessions` keeps an isolated dir fully separate.
+
+### Custom `/v1` Gateways
+
+Custom profiles accept a base URL with or without a trailing `/v1` (Claude Code appends `/v1/messages` itself, so `/v1` is stripped), and can fetch the model list from `<base>/v1/models`. The endpoint must speak the **Anthropic Messages API**; pure OpenAI `/chat/completions` endpoints need a translating gateway in front.
 
 ---
 
